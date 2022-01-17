@@ -6,22 +6,37 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
+import java.util.Random;
+import java.util.stream.Collectors;
 
 @Repository
 public class ProductDao {
 
-    public static final String HASH_KEY = "Product";
+    public static final String HASH_KEY = "user-logs";
+
     @Autowired
     private RedisTemplate template;
 
     public Product save(Product product) {
+        Random rd = new Random();
+        Integer idRandom = rd.nextInt(Integer.MAX_VALUE);
+        product.setId(idRandom);
+        product.setTimeCreate(new Date());
         template.opsForHash().put(HASH_KEY, product.getId(), product);
         return product;
     }
 
     public List<Product> findAll() {
-        return template.opsForHash().values(HASH_KEY);
+        List<Product> products = template.opsForHash().values(HASH_KEY);
+        if (products.size() > 0)
+            return products
+                    .stream()
+                    .sorted((p1, p2) -> p1.getTimeCreate().compareTo(p2.getTimeCreate()))
+                    .collect(Collectors.toList());
+        else
+            return products;
     }
 
     public Product findProductById(int id) {
